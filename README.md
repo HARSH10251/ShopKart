@@ -1,471 +1,449 @@
-# 🛍️ ShopKart — Wishlist Feature Documentation (Lab 04)
+# 🛒 ShopKart — Modern Full-Stack E-Commerce Platform
 
-Comprehensive guide and technical reference for the production-grade Wishlist system implemented in **ShopKart**.
+[![Live Demo](https://img.shields.io/badge/Demo-Live_on_Vercel-success?style=for-the-badge&logo=vercel)](https://shop-kart-8ai1.vercel.app)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Express](https://img.shields.io/badge/Express-5.2-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Razorpay](https://img.shields.io/badge/Razorpay-Gateway_Integrated-0C2340?style=for-the-badge&logo=razorpay&logoColor=white)](https://razorpay.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-v18+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+
+**ShopKart** is a production-grade, full-stack MERN e-commerce application designed with a sleek glassmorphic UI, robust RESTful APIs, JWT-based dual-layer authentication, persistent shopping cart and wishlist management, Razorpay payment processing, and zero-downtime deployment on Vercel.
+
+🔗 **Live Deployment:** [https://shop-kart-8ai1.vercel.app](https://shop-kart-8ai1.vercel.app)  
+📦 **Repository:** [https://github.com/HARSH10251/ShopKart](https://github.com/HARSH10251/ShopKart)
 
 ---
 
 ## 📑 Table of Contents
-1. [Feature Overview](#-feature-overview)
-2. [Technologies & Packages Used](#-technologies--packages-used)
-3. [File Structure & Directory Guide](#-file-structure--directory-guide)
-4. [Database Architecture & Schema Design](#-database-architecture--schema-design)
-5. [Backend Functions & Endpoints](#-backend-functions--endpoints)
-   - [Add Product to Wishlist (`addToWishlist`)](#1-add-product-to-wishlist)
-   - [Remove Product from Wishlist (`removeFromWishlist`)](#2-remove-product-from-wishlist)
-   - [Get User Wishlist with Population (`getWishlist`)](#3-get-user-wishlist-with-populate)
-   - [Toggle Wishlist (`toggleWishlist`)](#4-toggle-wishlist-bonus)
-6. [Frontend Components & Functions](#-frontend-components--functions)
-   - [API Client Layer (`api.js`)](#1-api-client-layer-srcservicesapijs)
-   - [Product Card (`ProductCard.jsx`)](#2-product-card-srccomponentsproductcardjsx)
-   - [Wishlist Page (`Wishlist.jsx`)](#3-wishlist-page-srcpageswishlistjsx)
-   - [Wishlist Card (`WishlistCard.jsx`)](#4-wishlist-card-srccomponentswishlistcardjsx)
-   - [Navbar Integration (`Navbar.jsx`)](#5-navbar-srccomponentsnavbarjsx)
-7. [Step-by-Step Execution Flows](#-step-by-step-execution-flows)
-   - [How Adding to Wishlist Works](#flow-a--adding-a-product-to-wishlist)
-   - [How Removing from Wishlist Works](#flow-b--removing-a-product-from-wishlist)
-8. [Edge Cases & Error Handling](#-edge-cases--error-handling)
-9. [Automated Verification & Test Suite](#-automated-verification--test-suite)
+1. [Key Features](#-key-features)
+2. [Architecture & System Design](#-architecture--system-design)
+3. [Tech Stack](#-tech-stack)
+4. [File & Directory Structure](#-file--directory-structure)
+5. [Database Architecture & Schemas](#-database-architecture--schemas)
+6. [API Specification & Endpoints](#-api-specification--endpoints)
+7. [Getting Started (Local Development)](#-getting-started-local-development)
+8. [Environment Variables](#-environment-variables)
+9. [Automated Testing & QA](#-automated-testing--qa)
+10. [Cloud Deployment (Vercel & Render)](#-cloud-deployment-vercel--render)
+11. [Authors & Acknowledgments](#-authors--acknowledgments)
 
 ---
 
-## 🎯 Feature Overview
+## ✨ Key Features
 
-The Wishlist feature allows authenticated ShopKart users to save products they are interested in, view them on a dedicated `/wishlist` page with real-time stock and prices, and remove items when no longer needed.
+### 🔐 1. Authentication & Security
+- **Dual-Layer Token Authentication**: Uses **JWT** tokens stored in secure `HttpOnly` cookies, paired with an automated client-side `Authorization: Bearer <token>` fallback in `localStorage` for cross-site cookie privacy compatibility.
+- **Password Protection**: Multi-round hashing with **bcrypt** (salt rounds = 10) ensures user credentials are never stored in plain text.
+- **Protected Routes**: Client-side route guards (`<ProtectedRoute />`) redirect unauthenticated visitors to `/login`, while backend middleware (`auth.middleware.js`) blocks unauthorized API access.
 
-### Key Highlights:
-- **Zero Redundancy**: Stored as MongoDB `ObjectId` references, not embedded objects.
-- **Protected APIs**: Authenticated using JSON Web Tokens (JWT) stored in HTTP-only cookies / Bearer headers.
-- **Duplicate Prevention**: Backend rejection with `409 Conflict` + UI button disabling while saving.
-- **Populated Queries**: Mongoose `.populate()` pulls live product data on demand.
-- **Responsive States**: Handles `Default`, `Loading` (`⏳ Saving...`), `Success` (`♥ Added to Wishlist`), `Empty`, and `Error` states.
-- **Bonus Extras**: Atomic toggle endpoint (`PATCH /wishlist/:id/toggle`) & live Navbar count badge (`Wishlist (N)`).
+### 🛍️ 2. Product Discovery & Catalog
+- **Instant Search & Filter**: Real-time keyword search with debouncing, dynamic category filtering (Electronics, Fashion, Books, Home), and price sorting (`asc` / `desc`).
+- **Product Details View**: Dedicated view (`/products/:id`) featuring high-resolution image galleries, rich descriptions, dynamic in-stock/out-of-stock badges, and one-click cart/wishlist toggles.
+- **Database Seeding**: Built-in seeding script (`node seed_products.js`) with realistic catalog items across multiple categories.
+
+### 💖 3. Interactive Wishlist
+- **ObjectId Referencing**: Zero data duplication—wishlist items are saved as MongoDB `ObjectId` references and populated on-demand with `.populate()`.
+- **Duplicate Prevention**: Backend enforces unique entries with `409 Conflict` checks and UI action throttling.
+- **Reactive Badges**: Global Navbar synchronizes the live wishlist item count (`Wishlist (N)`) across all views.
+- **One-Click Toggle**: Atomic toggle endpoint (`PATCH /wishlist/:id/toggle`) enables instant save/unsave actions.
+
+### 🛒 4. Persistent Shopping Cart
+- **Centralized CartContext**: Unified global state management managing additions, deletions, and quantity updates.
+- **Stock Limit Enforcement**: Prevents customers from requesting more items than are physically available in inventory.
+- **Dynamically Calculated Totals**: Subtotal and item counts are derived dynamically on each request to prevent stale pricing anomalies.
+
+### 💳 5. Checkout & Razorpay Integration
+- **Indian Address Validation**: Shipping form with real-time validation (10-digit mobile number, 6-digit PIN code, city, state, street address).
+- **Official Razorpay Checkout**: Seamless modal popup using Razorpay's JavaScript SDK (`checkout.js`) with instant payment order generation.
+- **Cryptographic Signature Verification**: Server-side HMAC SHA256 validation verifies payment authenticity before committing orders to `paid` status.
+- **Dev Mode Test Simulation**: Built-in test payment simulation endpoint for instant developer checkout testing without active banking credentials.
+
+### 📦 6. Order Tracking & Lifecycle
+- **Order History**: Dedicated `/orders` screen with purchase history, timestamp, status tags, and delivery summaries.
+- **Single Order Breakdown**: View individual receipts (`/order-success/:id` and `/orders/:id`) with populated product summaries and tracking information.
+- **Status Progression**: Live progression pipeline (`pending` $\rightarrow$ `paid` $\rightarrow$ `processing` $\rightarrow$ `shipped` $\rightarrow$ `delivered`).
 
 ---
 
-## 🛠️ Technologies & Packages Used
+## 🏛️ Architecture & System Design
 
-| Technology / Package | Purpose |
-| :--- | :--- |
-| **Node.js & Express 5** | REST API server framework and routing |
-| **MongoDB & Mongoose 9** | Database and Object Data Modeling (ODM) with Schema references and `.populate()` |
-| **jsonwebtoken (JWT)** | Stateless authentication and identity extraction |
-| **cookie-parser** | Parsing signed session cookies from request headers |
-| **React 18 + Vite 6** | Modern client-side UI rendering with fast HMR |
-| **React Router v7** | Client-side routing (`/products`, `/products/:id`, `/wishlist`, `/login`) |
-| **Axios** | HTTP requests with `withCredentials: true` |
-| **lucide-react** | Clean SVG iconography (`Heart`, `Trash2`, `Loader2`, `AlertCircle`, etc.) |
+### High-Level System Architecture
+```mermaid
+graph TD
+    Client["React 18 Single Page App<br/>(Vite + React Router)"]
+    APIClient["Axios HTTP Layer<br/>(Cookies + Bearer Token)"]
+    VercelEdge["Vercel CDN / Edge Gateway<br/>(vercel.json rewrites)"]
+    ServerlessExpress["Express 5 REST API<br/>(api/index.js & index.js)"]
+    AuthMW["Auth Middleware<br/>(JWT Verification)"]
+    Controllers["Express Controllers<br/>(Customer, Product, Cart, Wishlist, Order)"]
+    MongoDB[("MongoDB Atlas Database<br/>(Mongoose 9 ODM)")]
+    RazorpayAPI["Razorpay Payment Gateway<br/>(Order API + Webhook HMAC)"]
+
+    Client --> APIClient
+    APIClient --> VercelEdge
+    VercelEdge -->|/api/*| ServerlessExpress
+    VercelEdge -->|/*| Client
+    ServerlessExpress --> AuthMW
+    AuthMW --> Controllers
+    Controllers --> MongoDB
+    Controllers --> RazorpayAPI
+```
+
+### Authentication & Session Lifecycle
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Browser as React App (Vite)
+    participant Server as Express Server
+    participant DB as MongoDB Atlas
+
+    User->>Browser: Enters email & password
+    Browser->>Server: POST /api/customers/login
+    Server->>DB: Find customer & bcrypt.compare()
+    DB-->>Server: User verified
+    Server-->>Browser: Set-Cookie (HttpOnly, Secure) + JSON token
+    Note over Browser: Stores token in localStorage<br/>as secondary cross-origin fallback
+    Browser->>Server: GET /api/cart (with Cookie & Bearer header)
+    Server->>Server: auth.middleware verifies JWT
+    Server->>DB: Fetch user cart with .populate('cart.product')
+    DB-->>Server: Return populated cart
+    Server-->>Browser: 200 OK + Cart Items
+```
 
 ---
 
-## 📁 File Structure & Directory Guide
+## 💻 Tech Stack
+
+| Domain | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend** | [React 18](https://react.dev/) | Component-driven user interface |
+| **Build Tool** | [Vite 6](https://vitejs.dev/) | Next-generation frontend tooling and fast HMR |
+| **Routing** | [React Router v7](https://reactrouter.com/) | Declarative client-side routing and protected routes |
+| **State Management** | React Context API | Centralized Cart and Session state management |
+| **Icons & UI** | [Lucide React](https://lucide.dev/) | Modern SVG iconography with customized Glassmorphic styling |
+| **HTTP Client** | [Axios](https://axios-http.com/) | Promise-based HTTP client with request interceptors |
+| **Backend** | [Express 5](https://expressjs.com/) | RESTful API backend framework for Node.js |
+| **Database** | [MongoDB Atlas](https://www.mongodb.com/atlas) | Cloud-hosted NoSQL document database |
+| **ODM** | [Mongoose 9](https://mongoosejs.com/) | Elegant MongoDB object modeling for Node.js |
+| **Authentication** | [jsonwebtoken (JWT)](https://jwt.io/) & [bcrypt](https://www.npmjs.com/package/bcrypt) | Cryptographic user tokens and salted password hashing |
+| **Payment Gateway** | [Razorpay SDK](https://razorpay.com/) | Digital payment infrastructure with HMAC verification |
+| **Hosting & CI/CD** | [Vercel](https://vercel.com/) | Serverless cloud deployment with edge distribution |
+
+---
+
+## 📁 File & Directory Structure
 
 ```
 ShopKart/
-├── models/
-│   ├── customer.model.js       # Customer schema containing the wishlist ObjectId references array
-│   ├── user.model.js           # Re-exports customer.model.js for naming convention consistency
-│   └── product.model.js        # Product schema (source of truth for price, image, stock, etc.)
-│
-├── middlewares/
-│   └── auth.middleware.js      # Verifies JWT token and attaches user document to req.user
-│
+├── api/
+│   └── index.js                 # Vercel Serverless Function entrypoint wrapping Express app
+├── config/
+│   └── razorpay.js              # Razorpay SDK initialization with test keys
 ├── controllers/
-│   └── wishlist.controller.js  # Core logic: addToWishlist, removeFromWishlist, getWishlist, toggleWishlist
-│
+│   ├── customer.controller.js   # Auth: register, login, profile, logout, changePassword
+│   ├── product.controller.js    # Catalog: getProducts, getProductById, createProduct
+│   ├── wishlist.controller.js   # Wishlist: addToWishlist, getWishlist, removeFromWishlist, toggleWishlist
+│   ├── cart.controller.js       # Cart: addToCart, getCart, updateCartQuantity, removeFromCart
+│   └── order.controller.js      # Orders: createPaymentOrder, verifyPayment, getOrders, getOrderById
+├── middlewares/
+│   └── auth.middleware.js       # Extracts & validates JWT from Cookie or Authorization header
+├── models/
+│   ├── customer.model.js        # Customer schema (name, email, password, wishlist, cart)
+│   ├── product.model.js         # Product schema (name, price, category, stock, image)
+│   ├── order.model.js           # Order schema (items, shippingAddress, paymentStatus, razorpay details)
+│   └── user.model.js            # Customer model alias for backwards compatibility
 ├── routes/
-│   └── wishlist.routes.js      # Express router mapping HTTP routes to controller methods under /wishlist
-│
+│   ├── customer.routes.js       # Customer routes (/customers/*)
+│   ├── product.routes.js        # Product routes (/products/*)
+│   ├── wishlist.routes.js       # Wishlist routes (/wishlist/*)
+│   ├── cart.routes.js           # Shopping cart routes (/cart/*)
+│   └── order.routes.js          # Order and payment routes (/orders/*)
 ├── src/
-│   ├── services/
-│   │   └── api.js              # Centralized Axios client for calling backend wishlist endpoints
 │   ├── components/
-│   │   ├── Navbar.jsx          # Top navigation bar displaying real-time wishlist count badge
-│   │   ├── ProductCard.jsx     # Discovery card with wishlist button and interactive states
-│   │   ├── WishlistCard.jsx    # Wishlist card with 'View Details' and 'Remove from Wishlist' actions
-│   │   └── ProtectedRoute.jsx  # Guards /wishlist route, redirecting unauthenticated users to /login
+│   │   ├── Navbar.jsx           # Global navigation header with dynamic cart/wishlist counters
+│   │   ├── ProductCard.jsx      # Catalog item card with wishlist quick-actions
+│   │   ├── WishlistCard.jsx     # Wishlist product card with removal and detail navigation
+│   │   ├── CartItem.jsx         # Cart row with interactive increment/decrement counters
+│   │   ├── ProtectedRoute.jsx   # Client-side authentication route wrapper
+│   │   └── SearchBar.jsx        # Search input with live debouncing and category selects
+│   ├── context/
+│   │   └── CartContext.jsx      # Global React Context provider managing cart state and actions
 │   ├── pages/
-│   │   ├── Wishlist.jsx        # Dedicated wishlist page with Loading, Empty, and Error states
-│   │   └── Products.jsx        # Product catalog page showing which products are already wishlisted
-│   ├── App.jsx                 # Application routes setup & global wishlist count synchronization
-│   └── index.css               # Styling for cards, buttons, badges, spinners, and responsive layouts
-│
-├── test_wishlist_suite.js      # 13 automated test scenarios verifying backend APIs and edge cases
-└── index.js                    # Express app entry point mounting routes and starting the server
+│   │   ├── Home.jsx             # User dashboard and welcome landing page
+│   │   ├── Products.jsx         # Discover products page with multi-facet filters
+│   │   ├── ProductDetails.jsx   # Full product specification view
+│   │   ├── Wishlist.jsx         # Dedicated wishlist management page
+│   │   ├── Cart.jsx             # Shopping cart review and cost breakdown
+│   │   ├── Checkout.jsx         # Indian shipping details and Razorpay checkout triggers
+│   │   ├── OrderConfirmation.jsx# Post-purchase receipt with order tracking summary
+│   │   ├── Orders.jsx           # Customer's historical orders list
+│   │   ├── OrderDetails.jsx     # Deep-dive view of a single order
+│   │   ├── Login.jsx            # Sign in form
+│   │   └── Register.jsx         # Account creation form
+│   ├── services/
+│   │   └── api.js               # Centralized Axios client with automatic Bearer token interceptor
+│   ├── App.jsx                  # Main routing tree and session state distributor
+│   ├── main.jsx                 # Vite React DOM root entrypoint
+│   └── index.css                # Global Glassmorphic design system and CSS styling
+├── utils/
+│   └── generateToken.js         # JWT generation with production-ready sameSite: none cookies
+├── index.js                     # Main Express server, database connection caching, and CORS setup
+├── seed_products.js             # Standalone catalog seeding script with sample inventory
+├── test_cart_suite.js           # Automated integration test suite for Shopping Cart
+├── test_order_suite.js          # Automated integration test suite for Orders & Razorpay
+├── test_wishlist_suite.js       # Automated integration test suite for Wishlist
+├── vite.config.js               # Vite bundler configuration and local proxy rules
+├── vercel.json                  # Vercel serverless routing and SPA URL rewrite rules
+├── package.json                 # Project dependencies, scripts, and engine specifications
+└── .env.example                 # Template for local and production environment variables
 ```
 
 ---
 
-## 🗄️ Database Architecture & Schema Design
+## 🗄️ Database Architecture & Schemas
 
-### 1. Customer Model (`models/customer.model.js`)
-The `wishlist` field is defined on the customer schema as an array of ObjectIds referencing the `Product` model:
-
+### 1. Customer Schema (`models/customer.model.js`)
+Stores user identity, security hashes, and relationship arrays referencing products:
 ```javascript
-// models/customer.model.js
-wishlist: {
-  type: [
+{
+  fullName: { type: String, required: true, trim: true },
+  email:    { type: String, required: true, unique: true, lowercase: true },
+  password: { type: String, required: true, minlength: 6 },
+  phone:    { type: String, required: true },
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+  cart: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-    },
-  ],
-  default: [],
+      product:  { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+      quantity: { type: Number, required: true, min: 1, default: 1 }
+    }
+  ]
 }
 ```
 
-### Why Reference (`ObjectId`) instead of Embedding Full Product Data?
-- **Single Source of Truth (SSOT)**: If a product's price, stock, description, or image changes in the `Product` collection, the wishlist automatically reflects the newest data upon population.
-- **Prevents Stale Data & Anomalies**: Duplicating product objects into thousands of user profiles creates massive maintenance overhead and risks showing incorrect prices.
-- **Storage Efficiency**: An `ObjectId` requires only 12 bytes of storage compared to hundreds of bytes for a full duplicated product object.
-
----
-
-## ⚙️ Backend Functions & Endpoints
-
-All controller logic is located in `controllers/wishlist.controller.js` and wired up in `routes/wishlist.routes.js`.
-
-### Authentication Gatekeeper (`middlewares/auth.middleware.js`)
-Every `/wishlist` route passes through `protect`:
-1. Reads token from cookie (`req.cookies.token`) or header (`Authorization: Bearer <token>`).
-2. Verifies token using `jwt.verify(token, process.env.JWT_SECRET)`.
-3. Loads customer from database: `req.user = await Customer.findById(decoded.id)`.
-4. If missing/invalid, immediately returns `401 Unauthorized`.
-
----
-
-### 1. Add Product to Wishlist
-- **Function**: `addToWishlist(req, res)` in `controllers/wishlist.controller.js`
-- **Route**: `POST /wishlist/:productId`
-- **Authorization**: Required (`req.user`)
-
-#### How it works:
+### 2. Product Schema (`models/product.model.js`)
+Source of truth for store inventory and catalog details:
 ```javascript
-const addToWishlist = async (req, res) => {
-  const { productId } = req.params;
-
-  // Step 1: Validate MongoDB ObjectId format
-  if (!mongoose.Types.ObjectId.isValid(productId)) {
-    return res.status(400).json({ success: false, message: "Invalid product ID" });
-  }
-
-  // Step 2: Verify product exists in database
-  const product = await Product.findById(productId);
-  if (!product) {
-    return res.status(404).json({ success: false, message: "Product not found" });
-  }
-
-  // Step 3: Prevent duplicate entries
-  const isAlreadyWishlisted = req.user.wishlist && req.user.wishlist.some(
-    (id) => (id?._id || id).toString() === productId
-  );
-
-  if (isAlreadyWishlisted) {
-    return res.status(409).json({ success: false, message: "Product already in wishlist" });
-  }
-
-  // Step 4: Add reference and persist
-  if (!req.user.wishlist) req.user.wishlist = [];
-  req.user.wishlist.push(productId);
-  await req.user.save();
-
-  return res.status(200).json({ success: true, message: "Product added to wishlist" });
-};
+{
+  name:        { type: String, required: true, trim: true },
+  description: { type: String, required: true },
+  price:       { type: Number, required: true, min: 0 },
+  category:    { type: String, required: true, enum: ["Electronics", "Fashion", "Books", "Home", "Other"] },
+  image:       { type: String, required: true },
+  stock:       { type: Number, required: true, min: 0, default: 0 }
+}
 ```
 
----
-
-### 2. Remove Product from Wishlist
-- **Function**: `removeFromWishlist(req, res)` in `controllers/wishlist.controller.js`
-- **Route**: `DELETE /wishlist/:productId`
-- **Authorization**: Required (`req.user`)
-
-#### How it works:
+### 3. Order Schema (`models/order.model.js`)
+Commitment record storing purchased items snapshot, address, and Razorpay transaction records:
 ```javascript
-const removeFromWishlist = async (req, res) => {
-  const { productId } = req.params;
-
-  // Step 1: Validate ID
-  if (!mongoose.Types.ObjectId.isValid(productId)) {
-    return res.status(400).json({ success: false, message: "Invalid product ID" });
-  }
-
-  // Step 2: Check if product is in user's wishlist
-  const isPresent = req.user.wishlist && req.user.wishlist.some(
-    (id) => (id?._id || id).toString() === productId
-  );
-
-  if (!isPresent) {
-    return res.status(404).json({ success: false, message: "Product not in wishlist" });
-  }
-
-  // Step 3: Filter out the product reference and persist
-  req.user.wishlist = req.user.wishlist.filter(
-    (id) => (id?._id || id).toString() !== productId
-  );
-  await req.user.save();
-
-  return res.status(200).json({ success: true, message: "Product removed from wishlist" });
-};
+{
+  customer:        { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
+  items: [
+    {
+      product:  { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+      name:     { type: String, required: true },
+      price:    { type: Number, required: true },
+      quantity: { type: Number, required: true, min: 1 }
+    }
+  ],
+  totalAmount:     { type: Number, required: true },
+  shippingAddress: {
+    fullName:     { type: String, required: true },
+    phone:        { type: String, required: true },
+    addressLine1: { type: String, required: true },
+    city:         { type: String, required: true },
+    state:        { type: String, required: true },
+    pincode:      { type: String, required: true }
+  },
+  paymentStatus:   { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
+  orderStatus:     { type: String, enum: ["pending", "processing", "shipped", "delivered", "cancelled"], default: "pending" },
+  razorpayOrderId:   { type: String },
+  razorpayPaymentId: { type: String },
+  razorpaySignature: { type: String }
+}
 ```
 
 ---
 
-### 3. Get User Wishlist with `.populate()`
-- **Function**: `getWishlist(req, res)` in `controllers/wishlist.controller.js`
-- **Route**: `GET /wishlist`
-- **Authorization**: Required (`req.user`)
+## 🔌 API Specification & Endpoints
 
-#### How it works:
-```javascript
-const getWishlist = async (req, res) => {
-  // Query authenticated user and populate the wishlist array
-  const customer = await Customer.findById(req.user._id).populate({
-    path: "wishlist",
-    select: "_id name price category image stock description",
-  });
+All endpoints support both standard root routes (`/customers`, `/products`, etc.) and serverless prefixed routes (`/api/customers`, `/api/products`, etc.).
 
-  if (!customer) {
-    return res.status(404).json({ success: false, message: "Customer not found" });
-  }
+### 🩺 Health & Diagnostic
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/health` or `/api/health` | ❌ | Healthcheck status and database connection state |
 
-  // Filter null entries in case a referenced product was deleted from DB
-  const wishlist = (customer.wishlist || []).filter((item) => item !== null);
-
-  return res.status(200).json({
-    success: true,
-    count: wishlist.length,
-    wishlist,
-  });
-};
-```
-
----
-
-### 4. Toggle Wishlist (Bonus)
-- **Function**: `toggleWishlist(req, res)` in `controllers/wishlist.controller.js`
-- **Route**: `PATCH /wishlist/:productId/toggle`
-- **Purpose**: Atomically adds product if absent or removes it if present.
-
----
-
-## 🖥️ Frontend Components & Functions
-
-### 1. API Client Layer (`src/services/api.js`)
-Encapsulates backend HTTP calls using a configured Axios instance with `withCredentials: true`:
-- `getWishlist()`: Sends `GET /wishlist`
-- `addToWishlist(productId)`: Sends `POST /wishlist/:productId`
-- `removeFromWishlist(productId)`: Sends `DELETE /wishlist/:productId`
-- `toggleWishlist(productId)`: Sends `PATCH /wishlist/:productId/toggle`
-
----
-
-### 2. Product Card (`src/components/ProductCard.jsx`)
-Displays a product with its wishlist action button and quick-action floating heart.
-
-- **Function**: `handleWishlistClick(e)`
-  - Prevents rapid spamming via `loading` state (`if (loading) return`).
-  - Calls `addToWishlist(productId)` or `removeFromWishlist(productId)`.
-  - Notifies parent component via `onWishlistChange` callback to keep Navbar counter and page state synchronized.
-- **States Rendered**:
-  - Default: `♡ Add to Wishlist`
-  - While request is in progress: `⏳ Saving...` (spinner with button disabled)
-  - After success: `♥ Added to Wishlist` (highlighted rose theme)
-  - On error: Displays non-intrusive alert text (e.g., prompt to login if 401).
-
----
-
-### 3. Wishlist Page (`src/pages/Wishlist.jsx`)
-Dedicated route at `/wishlist`.
-
-- **Function**: `fetchWishlist()`
-  - Executes on page load (`useEffect`).
-  - Sets `loading = true` while fetching `GET /wishlist`.
-  - Sets `wishlist` array and notifies Navbar count.
-  - Catches network or server errors, switching to the error state.
-- **Function**: `handleRemove(productId)`
-  - Calls `removeFromWishlist(productId)`.
-  - Optimistically updates local state: `setWishlist(prev => prev.filter(p => p._id !== productId))`.
-  - Synchronizes updated count to Navbar.
-- **Lifecycle States Handled**:
-  1. **Loading State**: Loader ring with `"Loading your wishlist..."`.
-  2. **Empty State**: Rendered when `wishlist.length === 0`:
-     - Glowing pulsing heart icon
-     - Text: *"Your wishlist is empty — Save products you love and find them here later."*
-     - Button: `[ Browse Products ]` navigating to `/products`.
-  3. **Error State**: Rendered when API call fails:
-     - Warning icon with *"Something went wrong. We couldn't load your wishlist."*
-     - Button: `[ Try Again ]` re-triggering `fetchWishlist()`.
-  4. **Populated State**: Renders grid of `WishlistCard` items.
-
----
-
-### 4. Wishlist Card (`src/components/WishlistCard.jsx`)
-Renders an individual saved product card:
-- Displays image, category badge, product title, Indian Rupee price (`₹`), and stock indicator.
-- **Actions**:
-  - `[ View Details ]`: Navigates to `/products/:id`.
-  - `[ Remove from Wishlist ]`: Triggers `handleRemove()` with loading spinner (`Removing...`).
-
----
-
-### 5. Navbar (`src/components/Navbar.jsx`)
-- Integrates the `Wishlist` link with real-time count badge: `Wishlist (N)`.
-- Updates dynamically whenever an item is added or removed across the application.
-
----
-
-## 🔄 Step-by-Step Execution Flows
-
-### Flow A — Adding a Product to Wishlist
-```
-User clicks "Add to Wishlist" on ProductCard
-   │
-   ├── UI sets loading=true, displays "⏳ Saving...", disables button
-   │
-   ▼
-Frontend calls: POST /wishlist/66d123... (with JWT Cookie/Bearer)
-   │
-   ▼
-Backend auth.middleware verifies JWT → sets req.user
-   │
-   ▼
-wishlist.controller: addToWishlist()
-   ├── Validates ObjectId syntax (400 if invalid)
-   ├── Checks Product collection (404 if not found)
-   ├── Checks req.user.wishlist.some(...) (409 if already present)
-   ├── Pushes productId to req.user.wishlist
-   └── Executes req.user.save() in MongoDB
-   │
-   ▼
-Backend returns: { success: true, message: "Product added to wishlist" }
-   │
-   ▼
-Frontend receives 200/201:
-   ├── Sets isWishlisted = true
-   ├── Changes button to "♥ Added to Wishlist"
-   ├── Updates Navbar count: Wishlist (N + 1)
-   └── Sets loading = false
-```
-
----
-
-### Flow B — Removing a Product from Wishlist
-```
-User clicks "Remove from Wishlist" on WishlistCard
-   │
-   ├── UI sets removing=true, displays spinner "Removing..."
-   │
-   ▼
-Frontend calls: DELETE /wishlist/66d123... (with JWT Cookie/Bearer)
-   │
-   ▼
-Backend auth.middleware verifies JWT → sets req.user
-   │
-   ▼
-wishlist.controller: removeFromWishlist()
-   ├── Validates ObjectId syntax (400 if invalid)
-   ├── Checks if productId exists in req.user.wishlist (404 if not present)
-   ├── Filters array: req.user.wishlist = req.user.wishlist.filter(...)
-   └── Executes req.user.save() in MongoDB
-   │
-   ▼
-Backend returns: { success: true, message: "Product removed from wishlist" }
-   │
-   ▼
-Frontend receives 200:
-   ├── Filters out product from Wishlist state: setWishlist(prev => ...)
-   ├── Updates Navbar count: Wishlist (N - 1)
-   └── If count reaches 0, UI automatically transitions to Empty State
-```
-
----
-
-## 🚨 Edge Cases & Error Handling
-
-| Scenario | HTTP Status | Backend Action | Frontend UX Reaction |
-| :--- | :---: | :--- | :--- |
-| **Guest user clicks Wishlist** | `401` | Auth middleware halts request | Displays login reminder toast, redirects to `/login` |
-| **Malformed Product ID** | `400` | Rejects with `"Invalid product ID"` | Displays error message without crashing |
-| **Non-existent Product ID** | `404` | Rejects with `"Product not found"` | Displays warning banner |
-| **Product already in Wishlist** | `409` | Duplicate check prevents duplicate insert | Button remains marked as saved, informs user |
-| **Product already deleted** | `404` | Removal check fails gracefully | Shows error message |
-| **Deleted product referenced** | `200` | `.populate()` returns `null`, filtered out | UI only displays available products |
-| **Network failure on Wishlist** | — | Caught in `try...catch` block | Displays Error State with `"Try Again"` retry button |
-| **Empty Wishlist (0 items)** | `200` | Returns `{ success: true, count: 0, wishlist: [] }` | Displays Empty State with `"Browse Products"` CTA |
-
----
-
-## 🧪 Automated Verification & Test Suite
-
-The test suite in `test_wishlist_suite.js` covers 13 end-to-end integration test cases against MongoDB Atlas.
-
-### Running the Test Suite:
-```bash
-npm test
-```
-
-### Verified Test Cases:
-1. `GET /wishlist` without token $\rightarrow$ `401 Unauthorized`
-2. `POST /wishlist/:id` without token $\rightarrow$ `401 Unauthorized`
-3. Dynamic user registration and JWT login
-4. `POST /wishlist/notanid` $\rightarrow$ `400 Bad Request`
-5. `POST /wishlist/:nonExistentId` $\rightarrow$ `404 Not Found`
-6. `POST /wishlist/:validId` $\rightarrow$ `200 Success`
-7. Duplicate `POST /wishlist/:validId` $\rightarrow$ `409 Conflict`
-8. `GET /wishlist` $\rightarrow$ `200 Success` with populated `name`, `price`, `stock`, `category`
-9. `PATCH /wishlist/:id/toggle` (off) $\rightarrow$ `isWishlisted: false`
-10. `PATCH /wishlist/:id/toggle` (on) $\rightarrow$ `isWishlisted: true`
-11. `DELETE /wishlist/:id` $\rightarrow$ `200 Success`
-12. Duplicate `DELETE /wishlist/:id` $\rightarrow$ `404 Not Found`
-13. Final `GET /wishlist` $\rightarrow$ `count: 0` (Empty array)
-
----
-
-# 🛒 ShopKart — Shopping Cart System (Lab 05)
-
-Full-stack, persistent Shopping Cart system with MongoDB backend persistence and centralized React Context API global state management.
-
-## 🎯 Architecture & Data Flow
-
-```
-Product Card / Product Details / Cart Page
-                  ↓
-       CartContext (Global State)
-                  ↓
-         api.js (Axios Layer)
-                  ↓
-   Express REST API (/cart Router)
-                  ↓
-        Auth JWT Middleware
-                  ↓
-   Cart Controller (Stock Validation)
-                  ↓
-        MongoDB (User.cart)
-                  ↓
-Reactive UI Update: Navbar (Count) + Cart Page (Subtotal)
-```
-
-## 🔌 API Specification
-
-| Method | Endpoint | Auth | Purpose | Response |
+### 👤 Customer & Authentication
+| Method | Endpoint | Auth | Description | Payload |
 | :--- | :--- | :---: | :--- | :--- |
-| `POST` | `/cart/:productId` | ✅ | Add item or increment quantity if exists | `{ success: true, message: "Cart updated", cart: [...] }` |
-| `GET` | `/cart` | ✅ | Fetch current user's populated cart | `{ success: true, cart: [...] }` |
-| `PATCH` | `/cart/:productId` | ✅ | Update exact item quantity | `{ success: true, message: "Cart updated", cart: [...] }` |
-| `DELETE` | `/cart/:productId` | ✅ | Remove item from user's cart | `{ success: true, message: "Product removed from cart", cart: [...] }` |
+| `POST` | `/customers/register` | ❌ | Register new account | `{ fullName, email, password, phone }` |
+| `POST` | `/customers/login` | ❌ | Sign in & receive session cookie / token | `{ email, password }` |
+| `GET` | `/customers/me` | ✅ | Fetch currently authenticated user | None |
+| `POST` | `/customers/logout` | ✅ | Terminate session & clear cookies | None |
+| `PATCH` | `/customers/change-password` | ✅ | Update account password | `{ oldPassword, newPassword }` |
 
-## 🧮 Derived Values
+### 📦 Products Catalog
+| Method | Endpoint | Auth | Description | Query Parameters |
+| :--- | :--- | :---: | :--- | :--- |
+| `GET` | `/products` | ❌ | Fetch products with search & filters | `?search=&category=&sort=` |
+| `GET` | `/products/:id` | ❌ | Fetch single product by ID | None |
+| `POST` | `/products` | ✅ | Create new product listing | `{ name, price, stock, category, image, description }` |
 
-- **Total Count**: $\sum \text{quantity}$ (displayed in Navbar badge `Cart (3)`)
-- **Subtotal**: $\sum (\text{product.price} \times \text{quantity})$
-- Neither is stored redundantly in MongoDB, guaranteeing zero price/quantity staleness.
+### 💖 Wishlist
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/wishlist` | ✅ | Retrieve populated wishlist items for current user |
+| `POST` | `/wishlist/:productId` | ✅ | Add product reference to wishlist |
+| `DELETE` | `/wishlist/:productId` | ✅ | Remove product reference from wishlist |
+| `PATCH` | `/wishlist/:productId/toggle`| ✅ | Atomically toggle wishlist status (add/remove) |
 
-## 🧪 Automated Test Verification
+### 🛒 Shopping Cart
+| Method | Endpoint | Auth | Description | Payload |
+| :--- | :--- | :---: | :--- | :--- |
+| `GET` | `/cart` | ✅ | Fetch populated cart with live stock | None |
+| `POST` | `/cart/:productId` | ✅ | Add item to cart or increment quantity | None |
+| `PATCH` | `/cart/:productId` | ✅ | Update item quantity in cart | `{ quantity: 3 }` |
+| `DELETE` | `/cart/:productId` | ✅ | Remove product from cart | None |
 
-Run all cart integration tests:
+### 💳 Orders & Razorpay Checkout
+| Method | Endpoint | Auth | Description | Payload |
+| :--- | :--- | :---: | :--- | :--- |
+| `POST` | `/orders/create-payment-order` | ✅ | Create Razorpay order & pending ShopKart order | `{ shippingAddress: { ... } }` |
+| `POST` | `/orders/verify-payment` | ✅ | Verify HMAC SHA256 payment signature | `{ shopKartOrderId, razorpay_order_id, razorpay_payment_id, razorpay_signature }` |
+| `POST` | `/orders/simulate-test-payment`| ✅ | Dev simulation bypassing Razorpay modal | `{ shopKartOrderId }` |
+| `GET` | `/orders` | ✅ | Fetch all historical orders for current user | None |
+| `GET` | `/orders/:id` | ✅ | Fetch detailed single order by ID | None |
+| `PATCH` | `/orders/:id/status` | ✅ | Advance order status progression | `{ status: "shipped" }` |
+
+---
+
+## 🚀 Getting Started (Local Development)
+
+### 1. Prerequisites
+- **Node.js** v18.0.0 or higher
+- **npm** v9.0.0 or higher
+- **MongoDB** (Local instance or free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster)
+
+### 2. Clone the Repository
 ```bash
-npm run test:cart
+git clone https://github.com/HARSH10251/ShopKart.git
+cd ShopKart
 ```
 
-Verifies all 14 test cases including authentication, quantity updates, stock enforcement, item deletions, and duplicate handling.
+### 3. Install Dependencies
+```bash
+npm install
+```
 
+### 4. Configure Environment Variables
+Copy the example environment configuration:
+```bash
+cp .env.example .env
+```
+Open `.env` and fill in your connection details:
+```env
+PORT=5001
+MONGO_URI=mongodb+srv://<username>:<password>@cluster0.wcldgqy.mongodb.net/shopkart?retryWrites=true&w=majority
+JWT_SECRET=your_jwt_secret_key_here
+NODE_ENV=development
+RAZORPAY_KEY_ID=rzp_test_yourKeyId
+RAZORPAY_KEY_SECRET=yourKeySecret
+VITE_RAZORPAY_KEY_ID=rzp_test_yourKeyId
+```
+
+### 5. Seed the Product Catalog
+Populate your database with sample catalog items:
+```bash
+node seed_products.js
+```
+
+### 6. Run the Application
+Open two terminal tabs:
+
+**Terminal 1 — Backend Server:**
+```bash
+npm run server
+# Express listening on http://localhost:5001
+```
+
+**Terminal 2 — Frontend Development Server:**
+```bash
+npm run dev
+# Vite server running on http://localhost:5173
+```
+Open your browser and navigate to `http://localhost:5173`.
+
+---
+
+## 🔑 Environment Variables
+
+| Variable Name | Environment | Description |
+| :--- | :---: | :--- |
+| `PORT` | Backend | Port for persistent Express server (Default: `5001`) |
+| `MONGO_URI` | Backend | MongoDB connection URI (Atlas SRV or direct replica set string) |
+| `JWT_SECRET` | Backend | Secret string used for signing and verifying JWT tokens |
+| `NODE_ENV` | Both | `development` for local or `production` for deployments |
+| `CLIENT_URL` | Backend | Optional custom client origin allowed by CORS |
+| `RAZORPAY_KEY_ID` | Backend | Razorpay Test API Key ID |
+| `RAZORPAY_KEY_SECRET` | Backend | Razorpay Test API Key Secret |
+| `VITE_RAZORPAY_KEY_ID`| Frontend | Razorpay Key ID exposed to frontend checkout script |
+| `VITE_API_BASE_URL` | Frontend | Backend API URL (leave blank on Vercel all-in-one; set to Render URL if separated) |
+
+---
+
+## 🧪 Automated Testing & QA
+
+ShopKart includes dedicated end-to-end integration test suites targeting actual MongoDB databases and Express route layers.
+
+```bash
+# Run the complete Checkout & Razorpay Order test suite
+npm test
+
+# Run specific feature suites:
+npm run test:orders     # Verifies Orders, Payments, Address validation, Stock deduction
+npm run test:cart       # Verifies Cart operations, Stock ceilings, and Quantity mutations
+npm run test:wishlist   # Verifies Wishlist referencing, Population, and Toggle states
+```
+
+---
+
+## ☁️ Cloud Deployment (Vercel & Render)
+
+### Option A: Complete Deployment on Vercel (Recommended)
+ShopKart is configured to deploy both frontend and backend serverless functions simultaneously using [`vercel.json`](file:///Users/harry/ShopKart/vercel.json) and [`api/index.js`](file:///Users/harry/ShopKart/api/index.js):
+
+1. Push your repository to **GitHub**.
+2. Go to [Vercel](https://vercel.com) and click **Add New Project** $\rightarrow$ **Import ShopKart**.
+3. In **Settings** $\rightarrow$ **Environment Variables**, add:
+   - `MONGO_URI` = *Your MongoDB Atlas connection string*
+   - `JWT_SECRET` = *Your secure JWT secret*
+   - `NODE_ENV` = `production`
+   - `RAZORPAY_KEY_ID` = `rzp_test_...`
+   - `RAZORPAY_KEY_SECRET` = `...`
+   - `VITE_RAZORPAY_KEY_ID` = `rzp_test_...`
+4. In **MongoDB Atlas** $\rightarrow$ **Network Access**, ensure `0.0.0.0/0` (Allow Access from Anywhere) is active.
+5. Click **Deploy**. Vercel will build the Vite frontend to `dist/` and wrap `/api` as a Serverless Function.
+
+### Option B: Separate Backend (Render) & Frontend (Vercel)
+If you prefer a persistent Express process:
+1. **Backend on Render**:
+   - Create a **Web Service** on [render.com](https://render.com) pointing to the repository.
+   - Build Command: `npm install` | Start Command: `npm start`
+   - Add environment variables (`MONGO_URI`, `JWT_SECRET`, `NODE_ENV=production`, etc.).
+2. **Frontend on Vercel**:
+   - Import the repository on [Vercel](https://vercel.com).
+   - Set Environment Variable `VITE_API_BASE_URL = https://your-backend.onrender.com`.
+   - Click **Deploy**.
+
+---
+
+## 👨‍💻 Authors & Acknowledgments
+
+- **Developer**: Harsh ([@HARSH10251](https://github.com/HARSH10251))
+- **Course / Module**: Full-Stack Web Development — E-Commerce Systems
+- **License**: ISC License
+
+---
+⭐ *If you find this project helpful, please consider starring the repository!*
