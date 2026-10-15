@@ -1,13 +1,36 @@
 import axios from "axios";
 
-// Create an Axios instance with withCredentials set to true
-// This ensures that the HttpOnly token cookie is automatically attached to requests
+// Smart API Base URL:
+// 1. If VITE_API_BASE_URL is provided with a real URL (e.g., Render/Railway backend), use it.
+// 2. In production without an external URL, default to "/api" (same-domain Vercel serverless).
+// 3. In local development, default to "http://localhost:5001".
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const isValidExternalUrl =
+  rawBaseUrl &&
+  rawBaseUrl.trim() !== "" &&
+  !rawBaseUrl.includes("your-deployed-backend-url");
+
+const API_BASE_URL = isValidExternalUrl
+  ? rawBaseUrl
+  : import.meta.env.PROD
+  ? "/api"
+  : "http://localhost:5001";
+
 const API = axios.create({
-  baseURL: "http://localhost:5001",
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
+});
+
+// Attach Authorization header if token exists in localStorage (cross-origin cookie fallback)
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem("shopkart_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 /**
@@ -17,6 +40,9 @@ const API = axios.create({
  */
 export const registerCustomer = async (customerData) => {
   const response = await API.post("/customers/register", customerData);
+  if (response.data?.token) {
+    localStorage.setItem("shopkart_token", response.data.token);
+  }
   return response.data;
 };
 
@@ -27,6 +53,9 @@ export const registerCustomer = async (customerData) => {
  */
 export const loginCustomer = async (credentials) => {
   const response = await API.post("/customers/login", credentials);
+  if (response.data?.token) {
+    localStorage.setItem("shopkart_token", response.data.token);
+  }
   return response.data;
 };
 
@@ -46,8 +75,12 @@ export const getProfile = async () => {
  * Clears HttpOnly cookie on backend
  */
 export const logoutCustomer = async () => {
-  const response = await API.post("/customers/logout");
-  return response.data;
+  try {
+    const response = await API.post("/customers/logout");
+    return response.data;
+  } finally {
+    localStorage.removeItem("shopkart_token");
+  }
 };
 
 /**

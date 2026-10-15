@@ -45,7 +45,7 @@ const Products = ({ onWishlistChange }) => {
       const msg =
         err.response?.data?.message ||
         (err.code === "ERR_NETWORK"
-          ? "Unable to connect to the backend server on port 5001. Please ensure the server is running."
+          ? "Unable to connect to the backend server. Please verify the API is running and reachable."
           : "Something went wrong while loading products.");
       setError(msg);
     } finally {
