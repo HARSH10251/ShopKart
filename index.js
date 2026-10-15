@@ -12,11 +12,13 @@ console.log("🔑 PORT:", process.env.PORT);
 console.log("🔑 RAZORPAY_KEY_ID:", process.env.RAZORPAY_KEY_ID);
 console.log("--------------------------------------------------");
 
-try {
-  dns.setDefaultResultOrder("ipv4first");
-  dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
-} catch (e) {
-  // Ignore if not supported in environment
+if (!process.env.VERCEL) {
+  try {
+    dns.setDefaultResultOrder("ipv4first");
+    dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
+  } catch (e) {
+    // Ignore if not supported in environment
+  }
 }
 
 const customerRoutes = require("./routes/customer.routes");
@@ -45,36 +47,13 @@ app.use(
       ) {
         return callback(null, true);
       }
-      return callback(null, true); // Permissive in deployment to avoid blocking users
+      return callback(null, true);
     },
     credentials: true,
   })
 );
 app.use(express.json());
 app.use(cookieParser());
-
-// Health check endpoint
-const healthHandler = (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    message: "ShopKart API is healthy and operational",
-    database: mongoose.connection.readyState === 1 ? "connected" : "connecting/disconnected",
-    timestamp: new Date().toISOString(),
-  });
-};
-app.get("/health", healthHandler);
-app.get("/api/health", healthHandler);
-
-// Register routes at both root and /api prefixes for maximum deployment flexibility
-const registerAppRoutes = (prefix = "") => {
-  app.use(`${prefix}/customers`, customerRoutes);
-  app.use(`${prefix}/products`, productRoutes);
-  app.use(`${prefix}/wishlist`, wishlistRoutes);
-  app.use(`${prefix}/cart`, cartRoutes);
-  app.use(`${prefix}/orders`, orderRoutes);
-};
-registerAppRoutes("");
-registerAppRoutes("/api");
 
 const PORT = process.env.PORT || 5001;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/shopkart";
@@ -86,12 +65,32 @@ const connectDB = async () => {
     return mongoose.connection;
   }
   if (!cachedConnection) {
-    cachedConnection = mongoose.connect(MONGO_URI);
+    cachedConnection = mongoose
+      .connect(MONGO_URI, {
+        serverSelectionTimeoutMS: 8000,
+      })
+      .then((m) => m)
+      .catch((err) => {
+        cachedConnection = null; // Reset cache so subsequent requests can retry
+        throw err;
+      });
   }
   return await cachedConnection;
 };
 
-// Middleware to ensure DB is connected before handling API requests
+// Health check endpoint (always accessible without DB dependency)
+const healthHandler = (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "ShopKart API is healthy and operational",
+    database: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    timestamp: new Date().toISOString(),
+  });
+};
+app.get("/health", healthHandler);
+app.get("/api/health", healthHandler);
+
+// CRITICAL: Middleware to ensure DB is connected BEFORE any API routes execute
 app.use(async (req, res, next) => {
   if (req.path === "/health" || req.path === "/api/health") {
     return next();
@@ -103,10 +102,21 @@ app.use(async (req, res, next) => {
     console.error("MongoDB Connection Middleware Error:", err);
     res.status(500).json({
       success: false,
-      message: "Database connection error. Please verify MONGO_URI and Atlas Network Access.",
+      message: `Database connection error: ${err.message}. Please verify MONGO_URI and Atlas Network Access.`,
     });
   }
 });
+
+// Register routes at both root and /api prefixes AFTER DB connection middleware
+const registerAppRoutes = (prefix = "") => {
+  app.use(`${prefix}/customers`, customerRoutes);
+  app.use(`${prefix}/products`, productRoutes);
+  app.use(`${prefix}/wishlist`, wishlistRoutes);
+  app.use(`${prefix}/cart`, cartRoutes);
+  app.use(`${prefix}/orders`, orderRoutes);
+};
+registerAppRoutes("");
+registerAppRoutes("/api");
 
 // Start persistent server when running directly (local or Render/Railway)
 if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
